@@ -1,4 +1,4 @@
-# HorseStapleBattery
+# HorseStapleBattery (the first 18+ Elixir library)
 
 Small library that allows you to generate random words.
 
@@ -7,6 +7,14 @@ You probably have seen these things if you have ever used Docker, or image websi
 The name is inspired on [an XKCD](https://xkcd.com/936/).
 
 [Documentation](https://hexdocs.pm/horsestaplebattery)
+
+## Disclaimer 
+
+This library contains words that have a different meaning in a different context.
+
+For example, "anal" can be the abbreviation for [anally retentive](https://en.wikipedia.org/wiki/Anal_retentiveness), and can mean, well, the 18+ thing. 
+
+This can cause some combinations that can be perceived as offensive to some. I don't have the time to filter out these possibilities, so I would like pull requests in this area. 
 
 ## Example 
 
