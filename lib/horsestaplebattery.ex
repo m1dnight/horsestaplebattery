@@ -132,7 +132,7 @@ defmodule HorseStapleBattery do
   def nouns(), do: unquote(Macro.escape(nouns_tuple))
 
   @doc """
-  Returns a big tuple containing all the nouns in the database.
+  Returns a big tuple containing all the verbs in the database.
   (Data from http://www.ashley-bovan.co.uk/words/partsofspeech.html)
 
   ## Examples
