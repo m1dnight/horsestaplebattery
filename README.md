@@ -78,7 +78,7 @@ iex> HorseStapleBattery.random_verb()
 ```elixir
 def deps do
   [
-    {:horsestaplebattery, "~> 0.1.0"}
+    {:horsestaplebattery, "~> 0.1.1"}
   ]
 end
 ```
