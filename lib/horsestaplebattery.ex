@@ -14,6 +14,15 @@ defmodule HorseStapleBattery do
 
   @categories [:adjectives, :adverbs, :nouns, :verbs]
 
+  @typedoc "A category of words, as accepted by `generate_compound/1`."
+  @type category :: :adjective | :adverb | :noun | :verb
+
+  @typedoc "Internal collection key matching `priv/<collection>.bin`."
+  @type collection :: :adjectives | :adverbs | :nouns | :verbs
+
+  @typedoc "A tuple of words; indexed in O(1) via `Kernel.elem/2`."
+  @type word_tuple :: tuple()
+
   # Build priv/<category>.bin at compile time from lib/source/<category>/*.
   # Giant tuple literals are not embedded into the BEAM, which keeps compilation
   # fast.
@@ -76,7 +85,8 @@ defmodule HorseStapleBattery do
       "boiled", "bold", "boned", "boon", "both", "bought", "boulle", ...}
 
   """
-  def adjectives(), do: load(:adjectives)
+  @spec adjectives() :: word_tuple()
+  def adjectives, do: load(:adjectives)
 
   @doc """
   Returns a big tuple containing all the adverbs in the database.
@@ -94,7 +104,8 @@ defmodule HorseStapleBattery do
       "heap", "heigh", "hence", ...}
 
   """
-  def adverbs(), do: load(:adverbs)
+  @spec adverbs() :: word_tuple()
+  def adverbs, do: load(:adverbs)
 
   @doc """
   Returns a big tuple containing all the nouns in the database.
@@ -112,7 +123,8 @@ defmodule HorseStapleBattery do
       "angsts", ...}
 
   """
-  def nouns(), do: load(:nouns)
+  @spec nouns() :: word_tuple()
+  def nouns, do: load(:nouns)
 
   @doc """
   Returns a big tuple containing all the verbs in the database.
@@ -130,7 +142,8 @@ defmodule HorseStapleBattery do
       "bans", "barb", ...}
 
   """
-  def verbs(), do: load(:verbs)
+  @spec verbs() :: word_tuple()
+  def verbs, do: load(:verbs)
 
   ####################
   # Random elements. #
@@ -146,7 +159,8 @@ defmodule HorseStapleBattery do
 
 
   """
-  def random_adverb(), do: random(adverbs(), @adverbs_size)
+  @spec random_adverb() :: String.t()
+  def random_adverb, do: random(adverbs(), @adverbs_size)
 
   @doc """
   Returns a single adjective, chosen at random from the entire collection.
@@ -158,7 +172,8 @@ defmodule HorseStapleBattery do
 
 
   """
-  def random_adjective(), do: random(adjectives(), @adjectives_size)
+  @spec random_adjective() :: String.t()
+  def random_adjective, do: random(adjectives(), @adjectives_size)
 
   @doc """
   Returns a single noun, chosen at random from the entire collection.
@@ -170,7 +185,8 @@ defmodule HorseStapleBattery do
 
 
   """
-  def random_noun(), do: random(nouns(), @nouns_size)
+  @spec random_noun() :: String.t()
+  def random_noun, do: random(nouns(), @nouns_size)
 
   @doc """
   Returns a single verb, chosen at random from the entire collection.
@@ -182,7 +198,8 @@ defmodule HorseStapleBattery do
 
 
   """
-  def random_verb(), do: random(verbs(), @verbs_size)
+  @spec random_verb() :: String.t()
+  def random_verb, do: random(verbs(), @verbs_size)
 
   ##############
   # Generators #
@@ -206,6 +223,7 @@ defmodule HorseStapleBattery do
 
 
   """
+  @spec generate_compound([category()]) :: String.t()
   def generate_compound(structure \\ [:adverb, :adverb, :noun]) do
     structure
     |> Enum.map(fn element ->
