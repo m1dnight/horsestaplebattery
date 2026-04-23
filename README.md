@@ -2,21 +2,21 @@
 
 Small library that allows you to generate random words.
 
-You probably have seen these things if you have ever used Docker, or image websites. 
+You probably have seen these things if you have ever used Docker, or image websites.
 
 The name is inspired on [an XKCD](https://xkcd.com/936/).
 
 [Documentation](https://hexdocs.pm/horsestaplebattery)
 
-## Disclaimer 
+## Disclaimer
 
 This library contains words that have a different meaning in a different context.
 
-For example, "anal" can be interpreted as the abbreviation for [anally retentive](https://en.wikipedia.org/wiki/Anal_retentiveness), and, well, the 18+ thing. 
+For example, "anal" can be interpreted as the abbreviation for [anally retentive](https://en.wikipedia.org/wiki/Anal_retentiveness), and, well, the 18+ thing.
 
-This means the random generator can produce some combinations that can be perceived as offensive to some. I don't have the time to filter out these possibilities, so I would like pull requests in this area. 
+This means the random generator can produce some combinations that can be perceived as offensive to some. I don't have the time to filter out these possibilities, so I would like pull requests in this area.
 
-## Example 
+## Example
 
 ```
 iex> HorseStapleBattery.adjectives()
@@ -54,8 +54,11 @@ iex> HorseStapleBattery.verbs()
 iex> HorseStapleBattery.generate_compound()
 "WrylySpiritlesslySavours"
 
-iex> HorseStapleBattery.generate_compound([:verb, :noun])
-"CockneyfyingGustav"
+iex> HorseStapleBattery.generate_compound(:snake_case)
+"yearningly_consequently_segos"
+
+iex> HorseStapleBattery.generate_compound(:snake_case, [:verb, :noun])
+"corroding_lexicologists"
 
 iex> HorseStapleBattery.random_adjective()
 "exoteric"

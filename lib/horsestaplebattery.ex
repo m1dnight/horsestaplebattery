@@ -23,6 +23,41 @@ defmodule HorseStapleBattery do
   @typedoc "A tuple of words; indexed in O(1) via `Kernel.elem/2`."
   @type word_tuple :: tuple()
 
+  @typedoc """
+  Supported casings for `generate_compound/2`.
+
+  Each atom joins the generated words in a different style. Examples below use
+  the input `["horse", "staple", "battery"]`:
+
+  | Atom                    | Result                  |
+  | ----------------------- | ----------------------- |
+  | `:pascal_case`          | `HorseStapleBattery`    |
+  | `:camel_case`           | `horseStapleBattery`    |
+  | `:snake_case`           | `horse_staple_battery`  |
+  | `:screaming_snake_case` | `HORSE_STAPLE_BATTERY`  |
+  | `:kebab_case`           | `horse-staple-battery`  |
+  | `:screaming_kebab_case` | `HORSE-STAPLE-BATTERY`  |
+  | `:train_case`           | `Horse-Staple-Battery`  |
+  | `:dot_case`             | `horse.staple.battery`  |
+  | `:path_case`            | `horse/staple/battery`  |
+  | `:flat_case`            | `horsestaplebattery`    |
+  | `:upper_flat_case`      | `HORSESTAPLEBATTERY`    |
+  | `:title_case`           | `Horse Staple Battery`  |
+  """
+  @type casing ::
+          :pascal_case
+          | :camel_case
+          | :snake_case
+          | :screaming_snake_case
+          | :kebab_case
+          | :screaming_kebab_case
+          | :train_case
+          | :dot_case
+          | :path_case
+          | :flat_case
+          | :upper_flat_case
+          | :title_case
+
   # Build priv/<category>.bin at compile time from lib/source/<category>/*.
   # Giant tuple literals are not embedded into the BEAM, which keeps compilation
   # fast.
@@ -206,11 +241,14 @@ defmodule HorseStapleBattery do
   ##############
 
   @doc """
-  Generates a compound with random values. The structure of the compound can be
-  defined with a list of arguments, or it can be predefined.
+  Generates a compound with random values.
 
-  In case of the predefined compound, <adverb><adverb><noun> will be chosen.
-  Another popular choise is <verb><noun>.
+  `casing` controls how the words are joined (see `t:casing/0` for the full
+  list of supported styles — defaults to `:pascal_case`).
+
+  `structure` is a list of `t:category/0` atoms describing which part of speech
+  to pick for each position. Defaults to `[:adverb, :adverb, :noun]`; another
+  popular choice is `[:verb, :noun]`.
 
   ## Examples
 
@@ -218,44 +256,100 @@ defmodule HorseStapleBattery do
       iex> HorseStapleBattery.generate_compound()
       "WrylySpiritlesslySavours"
 
-      iex> HorseStapleBattery.generate_compound([:verb, :noun])
-      "CockneyfyingGustav"
+      iex> HorseStapleBattery.generate_compound(:snake_case)
+      "safely_unwarrantedly_pluralities"
+
+      iex> HorseStapleBattery.generate_compound(:snake_case, [:verb, :noun])
+      "cockneyfying_gustav"
+
+      iex> HorseStapleBattery.generate_compound(:kebab_case, [:adjective, :noun])
+      "exoteric-spermatophyte"
 
 
   """
-  @spec generate_compound([category()]) :: String.t()
-  def generate_compound(structure \\ [:adverb, :adverb, :noun]) do
+  @spec generate_compound(casing(), [category()]) :: String.t()
+  def generate_compound(casing \\ :pascal_case, structure \\ [:adverb, :adverb, :noun]) do
     structure
-    |> Enum.map(fn element ->
-      word =
-        case element do
-          :adverb ->
-            random_adverb()
-
-          :adjective ->
-            random_adjective()
-
-          :noun ->
-            random_noun()
-
-          :verb ->
-            random_verb()
-        end
-
-      String.capitalize(word)
-    end)
-    |> Enum.reduce("", fn w, acc -> acc <> w end)
+    |> generate_from_structure()
+    |> apply_casing(casing)
   end
 
   ###################
   # Private Helpers #
   ###################
 
+  # generate a list of words based on the given structure
+  @spec generate_from_structure([category()]) :: [String.t()]
+  defp generate_from_structure(structure) do
+    Enum.map(structure, fn
+      :adverb -> random_adverb()
+      :adjective -> random_adjective()
+      :noun -> random_noun()
+      :verb -> random_verb()
+    end)
+  end
+
+  # apply the given casing style to the list of words.
+  # examples below use the input ["horse", "staple", "battery"].
+  @spec apply_casing([String.t()], casing()) :: String.t()
+  # HorseStapleBattery
+  defp apply_casing(words, :pascal_case),
+    do: Enum.map_join(words, &String.capitalize/1)
+
+  # horseStapleBattery
+  defp apply_casing(words, :camel_case) do
+    case Enum.map(words, &String.downcase/1) do
+      [] -> ""
+      [first | rest] -> first <> Enum.map_join(rest, &String.capitalize/1)
+    end
+  end
+
+  # horse_staple_battery
+  defp apply_casing(words, :snake_case),
+    do: Enum.map_join(words, "_", &String.downcase/1)
+
+  # HORSE_STAPLE_BATTERY
+  defp apply_casing(words, :screaming_snake_case),
+    do: Enum.map_join(words, "_", &String.upcase/1)
+
+  # horse-staple-battery
+  defp apply_casing(words, :kebab_case),
+    do: Enum.map_join(words, "-", &String.downcase/1)
+
+  # HORSE-STAPLE-BATTERY
+  defp apply_casing(words, :screaming_kebab_case),
+    do: Enum.map_join(words, "-", &String.upcase/1)
+
+  # Horse-Staple-Battery
+  defp apply_casing(words, :train_case),
+    do: Enum.map_join(words, "-", &String.capitalize/1)
+
+  # horse.staple.battery
+  defp apply_casing(words, :dot_case),
+    do: Enum.map_join(words, ".", &String.downcase/1)
+
+  # horse/staple/battery
+  defp apply_casing(words, :path_case),
+    do: Enum.map_join(words, "/", &String.downcase/1)
+
+  # horsestaplebattery
+  defp apply_casing(words, :flat_case),
+    do: Enum.map_join(words, &String.downcase/1)
+
+  # HORSESTAPLEBATTERY
+  defp apply_casing(words, :upper_flat_case),
+    do: Enum.map_join(words, &String.upcase/1)
+
+  # Horse Staple Battery
+  defp apply_casing(words, :title_case),
+    do: Enum.map_join(words, " ", &String.capitalize/1)
+
   # load a .bin file term into persistent term memory.
   # https://www.erlang.org/doc/apps/erts/persistent_term.html
   #
   # if the tuple did not exist yet, read it from the bin file and store it for
   # future fetches.
+  @spec load(collection()) :: word_tuple()
   defp load(category) do
     key = {__MODULE__, category}
 
@@ -271,6 +365,7 @@ defmodule HorseStapleBattery do
     end
   end
 
+  @spec random(word_tuple(), pos_integer()) :: String.t()
   defp random(coll, size) do
     idx = :rand.uniform(size) - 1
     elem(coll, idx)
