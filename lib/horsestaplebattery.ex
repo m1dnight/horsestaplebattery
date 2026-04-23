@@ -73,17 +73,18 @@ defmodule HorseStapleBattery do
       # helps in dev mode to recompile if they change.
       for f <- files, do: @external_resource(f)
 
-      # for each file, generate a tuple that holds all the values.
-      # this makes for fast lookup at runtime.
+      # for each file, gunzip it in-memory, split into lines, and accumulate
+      # into a single tuple for O(1) lookup at runtime.
       tuple =
         files
-        |> Stream.flat_map(fn file ->
+        |> Enum.flat_map(fn file ->
           file
-          |> File.stream!([], :line)
-          |> Stream.map(&String.trim/1)
-          |> Stream.map(&String.replace(&1, ~r/[^A-z]/u, ""))
+          |> File.read!()
+          |> :zlib.gunzip()
+          |> String.split("\n", trim: true)
+          |> Enum.map(&String.trim/1)
+          |> Enum.map(&String.replace(&1, ~r/[^A-z]/u, ""))
         end)
-        |> Enum.to_list()
         |> List.to_tuple()
 
       # write each tuple into its own binary
