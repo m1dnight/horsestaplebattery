@@ -25,3 +25,7 @@ erl_crash.dump
 horsestaplebattery-*.tar
 
 .DS_Store
+priv/adjectives.bin
+priv/adverbs.bin
+priv/nouns.bin
+priv/verbs.bin

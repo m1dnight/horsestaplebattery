@@ -4,74 +4,57 @@ defmodule HorseStapleBattery do
   directory. The source code for these words can be found here:
   http://www.ashley-bovan.co.uk/words/partsofspeech.html
 
-  The compiler will then take each of these categories (i.e., ajdectives,
-  adverbs, nouns, and verbs) and compile them into big-ass tuples.
-
-  At runtime the user should access these tuples with `Kernel.elem/2` to have
-  O(1) read.
+  At compile time the four categories (adjectives, adverbs, nouns, verbs) are
+  read, normalised, converted to tuples and written to `priv/<category>.bin` via
+  `:erlang.term_to_binary/1`. At runtime the tuples are loaded lazily into
+  `:persistent_term` on first access,  O(1) via `Kernel.elem/2`.
 
   Some helper functions are provided to create compounds.
   """
 
-  adjectives_tuple =
-    Path.wildcard(Path.join([__DIR__, "source/adjectives", "*"]))
-    |> Stream.flat_map(fn file ->
-      File.stream!(file, [], :line)
-      |> Stream.map(&String.trim/1)
-      |> Stream.map(fn word ->
-        word
-        |> String.replace(~r/[^A-z]/u, "")
-      end)
-    end)
-    |> Enum.to_list()
-    |> List.to_tuple()
+  @categories [:adjectives, :adverbs, :nouns, :verbs]
 
-  @adjectives_size :erlang.size(adjectives_tuple)
+  # Build priv/<category>.bin at compile time from lib/source/<category>/*.
+  # Giant tuple literals are not embedded into the BEAM, which keeps compilation
+  # fast.
+  priv_dir = Path.expand("../priv", __DIR__)
+  File.mkdir_p!(priv_dir)
 
-  adverbs_tuple =
-    Path.wildcard(Path.join([__DIR__, "source/adverbs", "*"]))
-    |> Stream.flat_map(fn file ->
-      File.stream!(file, [], :line)
-      |> Stream.map(&String.trim/1)
-      |> Stream.map(fn word ->
-        word
-        |> String.replace(~r/[^A-z]/u, "")
-      end)
-    end)
-    |> Enum.to_list()
-    |> List.to_tuple()
+  sizes =
+    for category <- @categories, into: %{} do
+      source_dir = Path.join([__DIR__, "source", Atom.to_string(category)])
+      files = source_dir |> Path.join("*") |> Path.wildcard()
 
-  @adverbs_size :erlang.size(adverbs_tuple)
+      # declare each file as an external resource
+      # helps in dev mode to recompile if they change.
+      for f <- files, do: @external_resource(f)
 
-  nouns_tuple =
-    Path.wildcard(Path.join([__DIR__, "source/nouns", "*"]))
-    |> Stream.flat_map(fn file ->
-      File.stream!(file, [], :line)
-      |> Stream.map(&String.trim/1)
-      |> Stream.map(fn word ->
-        word
-        |> String.replace(~r/[^A-z]/u, "")
-      end)
-    end)
-    |> Enum.to_list()
-    |> List.to_tuple()
+      # for each file, generate a tuple that holds all the values.
+      # this makes for fast lookup at runtime.
+      tuple =
+        files
+        |> Stream.flat_map(fn file ->
+          file
+          |> File.stream!([], :line)
+          |> Stream.map(&String.trim/1)
+          |> Stream.map(&String.replace(&1, ~r/[^A-z]/u, ""))
+        end)
+        |> Enum.to_list()
+        |> List.to_tuple()
 
-  @nouns_size :erlang.size(nouns_tuple)
+      # write each tuple into its own binary
+      File.write!(
+        Path.join(priv_dir, "#{category}.bin"),
+        :erlang.term_to_binary(tuple)
+      )
 
-  verbs_tuple =
-    Path.wildcard(Path.join([__DIR__, "source/verbs", "*"]))
-    |> Stream.flat_map(fn file ->
-      File.stream!(file, [], :line)
-      |> Stream.map(&String.trim/1)
-      |> Stream.map(fn word ->
-        word
-        |> String.replace(~r/[^A-z]/u, "")
-      end)
-    end)
-    |> Enum.to_list()
-    |> List.to_tuple()
+      {category, tuple_size(tuple)}
+    end
 
-  @verbs_size :erlang.size(verbs_tuple)
+  @adjectives_size Map.fetch!(sizes, :adjectives)
+  @adverbs_size Map.fetch!(sizes, :adverbs)
+  @nouns_size Map.fetch!(sizes, :nouns)
+  @verbs_size Map.fetch!(sizes, :verbs)
 
   ###############
   # Collections #
@@ -93,7 +76,7 @@ defmodule HorseStapleBattery do
       "boiled", "bold", "boned", "boon", "both", "bought", "boulle", ...}
 
   """
-  def adjectives(), do: unquote(Macro.escape(adjectives_tuple))
+  def adjectives(), do: load(:adjectives)
 
   @doc """
   Returns a big tuple containing all the adverbs in the database.
@@ -111,7 +94,7 @@ defmodule HorseStapleBattery do
       "heap", "heigh", "hence", ...}
 
   """
-  def adverbs(), do: unquote(Macro.escape(adverbs_tuple))
+  def adverbs(), do: load(:adverbs)
 
   @doc """
   Returns a big tuple containing all the nouns in the database.
@@ -129,7 +112,7 @@ defmodule HorseStapleBattery do
       "angsts", ...}
 
   """
-  def nouns(), do: unquote(Macro.escape(nouns_tuple))
+  def nouns(), do: load(:nouns)
 
   @doc """
   Returns a big tuple containing all the verbs in the database.
@@ -147,7 +130,7 @@ defmodule HorseStapleBattery do
       "bans", "barb", ...}
 
   """
-  def verbs(), do: unquote(Macro.escape(verbs_tuple))
+  def verbs(), do: load(:verbs)
 
   ####################
   # Random elements. #
@@ -249,6 +232,26 @@ defmodule HorseStapleBattery do
   ###################
   # Private Helpers #
   ###################
+
+  # load a .bin file term into persistent term memory.
+  # https://www.erlang.org/doc/apps/erts/persistent_term.html
+  #
+  # if the tuple did not exist yet, read it from the bin file and store it for
+  # future fetches.
+  defp load(category) do
+    key = {__MODULE__, category}
+
+    case :persistent_term.get(key, :__undefined__) do
+      :__undefined__ ->
+        path = Path.join(:code.priv_dir(:horsestaplebattery), "#{category}.bin")
+        tuple = path |> File.read!() |> :erlang.binary_to_term()
+        :persistent_term.put(key, tuple)
+        tuple
+
+      tuple ->
+        tuple
+    end
+  end
 
   defp random(coll, size) do
     idx = :rand.uniform(size) - 1

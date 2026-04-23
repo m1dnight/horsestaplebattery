@@ -28,7 +28,7 @@ defmodule HorseStapleBattery.MixProject do
   defp package() do
     [
       # These are the default files included in the package
-      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
       licenses: ["Apache 2.0"],
       maintainers: ["Christophe De Troyer"],
       links: %{"GitHub" => "https://github.com/m1dnight/horsestaplebattery"}
